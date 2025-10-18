@@ -2,9 +2,11 @@ package utils
 
 import (
 	"context"
+	"errors"
 	"os"
 	"time"
 
+	"github.com/gin-gonic/gin"
 	jwt "github.com/golang-jwt/jwt/v5"
 	"github.com/horzu/MagicStreamMovies/Server/MagicStreamMoviesServer/database"
 	"go.mongodb.org/mongo-driver/v2/bson"
@@ -78,4 +80,40 @@ func UpdateAllTokens(signedToken string, signedRefreshToken string, userId strin
 		return err
 	}
 	return nil
+}
+
+func GetAccessToken(c *gin.Context) (string, error) {
+	authHeader := c.GetHeader("Authorization")
+	if authHeader == "" {
+		return "", errors.New("authorization header missing")
+	}
+	tokenString := authHeader[len("Bearer "):]
+	if tokenString == "" {
+		return "", errors.New("Bearer token missing")
+	}
+	return tokenString, nil
+}
+
+func ValidateToken(tokenString string) (*SignedDetails, error) {
+	claims := &SignedDetails{}
+
+	token, err := jwt.ParseWithClaims(
+		tokenString,
+		claims,
+		func(token *jwt.Token) (interface{}, error) {
+			return []byte(secretKey), nil
+		},
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	if _, ok := token.Claims.(*SignedDetails); !ok || !token.Valid {
+		return nil, errors.New("invalid token")
+	}
+
+	if claims.ExpiresAt.Time.Before(time.Now()) {
+		return nil, errors.New("token expired")
+	}
+	return claims, nil
 }
