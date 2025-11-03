@@ -89,7 +89,7 @@ func GetAccessToken(c *gin.Context) (string, error) {
 	}
 	tokenString := authHeader[len("Bearer "):]
 	if tokenString == "" {
-		return "", errors.New("Bearer token missing")
+		return "", errors.New("bearer token missing")
 	}
 	return tokenString, nil
 }
@@ -116,4 +116,19 @@ func ValidateToken(tokenString string) (*SignedDetails, error) {
 		return nil, errors.New("token expired")
 	}
 	return claims, nil
+}
+
+func GetUserIdFromContext(c *gin.Context) (string, error) {
+	userId, exist := c.Get("userId")
+	if !exist {
+		return "", errors.New("userId does not exist in this context")
+	}
+
+	id, ok := userId.(string)
+
+	if !ok {
+		return "", errors.New("unable to retrieve userId")
+	}
+
+	return id, nil
 }
