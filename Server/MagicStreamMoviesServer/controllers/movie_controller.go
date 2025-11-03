@@ -97,6 +97,17 @@ func AddMovie() gin.HandlerFunc {
 
 func AdminReviewUpdate() gin.HandlerFunc {
 	return func(c *gin.Context) {
+		role, err := utils.GetRoleFromContext(c)
+		if err != nil{
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Role not found in context"})
+			return
+		}
+
+		if role != "ADMIN" {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "User must be part of the ADMIN role"})
+			return 
+		}
+
 		movieId := c.Param("imdb_id")
 		if movieId == "" {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "movieId required"})
@@ -118,7 +129,8 @@ func AdminReviewUpdate() gin.HandlerFunc {
 
 		sentiment, rankVal, err := GetReviewRanking(req.AdminReview)
 		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Error getting review ranking"})
+			log.Println("GetReviewRanking error:", err)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Error getting review ranking", "details": err.Error()})
 			return
 		}
 
