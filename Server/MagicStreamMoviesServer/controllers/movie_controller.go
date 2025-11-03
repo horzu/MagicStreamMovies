@@ -1,8 +1,11 @@
 package controllers
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
+	"io"
 	"log"
 	"net/http"
 	"os"
@@ -16,7 +19,6 @@ import (
 	"github.com/horzu/MagicStreamMovies/Server/MagicStreamMoviesServer/models"
 	"github.com/horzu/MagicStreamMovies/Server/MagicStreamMoviesServer/utils"
 	"github.com/joho/godotenv"
-	"github.com/tmc/langchaingo/llms/openai"
 	"go.mongodb.org/mongo-driver/v2/bson"
 	"go.mongodb.org/mongo-driver/v2/mongo"
 	"go.mongodb.org/mongo-driver/v2/mongo/options"
@@ -187,16 +189,6 @@ func GetReviewRanking(admin_review string) (string, int, error) {
 		log.Println("Warning: .env file not found")
 	}
 
-	OpenRouterAiApiKey := os.Getenv("OPENROUTER_API_KEY")
-	if OpenRouterAiApiKey == "" {
-		return "", 0, errors.New("could not read OPENROUTER_API_KEY")
-	}
-
-	llm, err := openai.New(openai.WithToken(OpenRouterAiApiKey))
-	if err != nil {
-		return "", 0, err
-	}
-
 	basePromptTemplate := os.Getenv("BASE_PROMPT_TEMPLATE")
 	if basePromptTemplate == "" {
 		return "", 0, errors.New("could not read BASE_PROMPT_TEMPLATE")
@@ -204,20 +196,86 @@ func GetReviewRanking(admin_review string) (string, int, error) {
 
 	basePrompt := strings.Replace(basePromptTemplate, "{rankings}", sentimentDelimited, 1)
 
-	response, err := llm.Call(context.Background(), basePrompt+admin_review)
-	if err != nil {
-		return "", 0, err
-	}
+	openRouterKey := os.Getenv("OPENROUTER_API_KEY")
+    openRouterBase := os.Getenv("OPENROUTER_BASE_URL")
+    model := os.Getenv("AI_MODEL")
+    if openRouterKey == "" {
+        return "", 0, errors.New("could not read OPENROUTER_API_KEY")
+    }
+    if openRouterBase == "" {
+        return "", 0, errors.New("could not read OPENROUTER_BASE_URL")
+    }
+    if model == "" {
+        // fallback if AI_MODEL not set
+        model = "gpt-4o-mini"
+    }
+
+    // build OpenRouter chat request
+    reqBody := map[string]interface{}{
+        "model": model,
+        "messages": []map[string]string{
+            {"role": "user", "content": basePrompt + admin_review},
+        },
+        "max_tokens": 800,
+        "temperature": 0,
+    }
+
+    bodyBytes, err := json.Marshal(reqBody)
+    if err != nil {
+        return "", 0, err
+    }
+
+    endpoint := strings.TrimRight(openRouterBase, "/") + "/chat/completions"
+    httpReq, err := http.NewRequest("POST", endpoint, bytes.NewReader(bodyBytes))
+    if err != nil {
+        return "", 0, err
+    }
+    httpReq.Header.Set("Authorization", "Bearer "+openRouterKey)
+    httpReq.Header.Set("Content-Type", "application/json")
+
+    client := &http.Client{Timeout: 20 * time.Second}
+    httpResp, err := client.Do(httpReq)
+    if err != nil {
+        return "", 0, err
+    }
+    defer httpResp.Body.Close()
+
+    respBody, _ := io.ReadAll(httpResp.Body)
+    if httpResp.StatusCode >= 300 {
+        return "", 0, errors.New("openrouter API error: " + httpResp.Status + " - " + string(respBody))
+    }
+
+    var orResp struct {
+        Choices []struct {
+            Message struct {
+                Content string `json:"content"`
+            } `json:"message"`
+            Text string `json:"text"`
+        } `json:"choices"`
+    }
+    if err := json.Unmarshal(respBody, &orResp); err != nil {
+        return "", 0, err
+    }
+    if len(orResp.Choices) == 0 {
+        return "", 0, errors.New("openrouter: no choices returned")
+    }
+
+    var responseText string
+    if orResp.Choices[0].Message.Content != "" {
+        responseText = strings.TrimSpace(orResp.Choices[0].Message.Content)
+    } else {
+        responseText = strings.TrimSpace(orResp.Choices[0].Text)
+    }
 
 	rankVal := 0
 
 	for _, ranking := range rankings {
-		if ranking.RankingName == response {
+		if ranking.RankingName == responseText {
 			rankVal = ranking.RankingValue
 			break
 		}
 	}
-	return response, rankVal, nil
+	return responseText, rankVal, nil
 
 }
 
