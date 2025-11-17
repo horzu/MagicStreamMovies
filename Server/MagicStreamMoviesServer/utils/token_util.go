@@ -89,14 +89,19 @@ func UpdateAllTokens(signedToken string, signedRefreshToken string, userId strin
 }
 
 func GetAccessToken(c *gin.Context) (string, error) {
-	authHeader := c.GetHeader("Authorization")
-	if authHeader == "" {
-		return "", errors.New("authorization header missing")
+	// authHeader := c.GetHeader("Authorization")
+	// if authHeader == "" {
+	// 	return "", errors.New("authorization header missing")
+	// }
+	// tokenString := authHeader[len("Bearer "):]
+	// if tokenString == "" {
+	// 	return "", errors.New("bearer token missing")
+	// }
+	tokenString, err := c.Cookie("access_token")
+	if err != nil {
+		return "", err
 	}
-	tokenString := authHeader[len("Bearer "):]
-	if tokenString == "" {
-		return "", errors.New("bearer token missing")
-	}
+
 	return tokenString, nil
 }
 
