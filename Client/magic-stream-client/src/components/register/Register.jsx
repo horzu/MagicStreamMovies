@@ -4,7 +4,7 @@ import Button from "react-bootstrap/Button";
 import Form from "react-bootstrap/Form";
 import axiosClient from "../../api/axiosConfig";
 import { useNavigate, Link, replace } from "react-router-dom";
-import logo from '../../assets/react.svg';
+import logo from "../../assets/logo.png";
 
 const Register = () => {
   const [firstName, setFirstName] = useState("");

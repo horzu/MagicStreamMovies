@@ -5,15 +5,25 @@ import Nav from "react-bootstrap/Nav";
 import Navbar from "react-bootstrap/Navbar";
 import { useNavigate, NavLink, Link } from "react-router-dom";
 import useAuth from "../../hook/useAuth";
+import logo from "../../assets/logo.png";
 
-const Header = ({handleLogout}) => {
+const Header = ({ handleLogout }) => {
   const navigate = useNavigate();
-  const {auth} = useAuth();
+  const { auth } = useAuth();
 
   return (
     <Navbar bg="dark" variant="dark" expand="lg" className="shadow-sm">
       <Container>
-        <Navbar.Brand>Magic Stream</Navbar.Brand>
+        <Navbar.Brand>
+          <img
+            alt="logo"
+            src={logo}
+            width={30}
+            height={30}
+            className="d-inline-block align-top me-2"
+          />{" "}
+          Magic Stream
+        </Navbar.Brand>
         <Navbar.Toggle aria-controls="main-navbar-nav" />
         <Navbar.Collapse>
           <Nav className="me-auto">
@@ -30,7 +40,11 @@ const Header = ({handleLogout}) => {
                 <span className="text-white me-3">
                   Hello, <strong>{auth.first_name}!</strong>
                 </span>
-                <Button variant="outline-light" size="sm" onClick={handleLogout}>
+                <Button
+                  variant="outline-light"
+                  size="sm"
+                  onClick={handleLogout}
+                >
                   Logout
                 </Button>
               </>
@@ -39,7 +53,7 @@ const Header = ({handleLogout}) => {
                 <Button
                   variant="outline-info"
                   size="sm"
-				  className="me-2"
+                  className="me-2"
                   onClick={() => navigate("/login")}
                 >
                   Login
@@ -60,4 +74,4 @@ const Header = ({handleLogout}) => {
   );
 };
 
-export default Header
+export default Header;
