@@ -1,9 +1,14 @@
 import { useLocation, Navigate, Outlet } from "react-router-dom";
 import useAuth from "../hook/useAuth";
+import Spinner from "./spinner/Spinner";
 
 const RequiredAuth = () => {
-  const { auth } = useAuth();
+  const { auth, loading } = useAuth();
   const location = useLocation();
+
+  if (loading) {
+    return <Spinner />;
+  }
 
   return auth ? (
     <Outlet />
@@ -12,4 +17,4 @@ const RequiredAuth = () => {
   );
 };
 
-export default RequiredAuth
+export default RequiredAuth;
