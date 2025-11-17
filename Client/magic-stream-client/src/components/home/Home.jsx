@@ -15,7 +15,6 @@ const Home = () => {
       try {
         const response = await axiosClient.get("/movies");
         setMovies(response.data);
-		console.log(response.data)
         if (response.data.length === 0) {
           setMessage("There are currently no movies available");
         }
