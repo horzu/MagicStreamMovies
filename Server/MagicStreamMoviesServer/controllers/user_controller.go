@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"os"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -111,11 +112,13 @@ func LoginUser(client *mongo.Client) gin.HandlerFunc {
 			return
 		}
 
+		domain := os.Getenv("COOKIE_DOMAIN")
+
 		http.SetCookie(c.Writer, &http.Cookie{
 			Name: "access_token",
 			Value: token,
 			Path: "/",
-			// Domain: "localhost",
+			Domain: domain,
 			MaxAge: 86400,
 			Secure: true,
 			HttpOnly: true,
@@ -126,7 +129,7 @@ func LoginUser(client *mongo.Client) gin.HandlerFunc {
 			Name: "refresh_token",
 			Value: refreshToken,
 			Path: "/",
-			// Domain: "localhost",
+			Domain: domain,
 			MaxAge: 604800,
 			Secure: true,
 			HttpOnly: true,
